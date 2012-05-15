@@ -19,6 +19,7 @@ _skProto = function() {
     
     // Methods
     // ----------------------------------------------------------------
+    
     _me.opendb = function(name) {
         if (_me._localdb !== null) {
             _me._localdb.open(name);
@@ -43,16 +44,15 @@ _skProto = function() {
     
     _me.table_exists = function(table) {
         var result = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?;", [table]);
-        var retval = result.isValidRow();
-        result.close();
+        var retval = _me.hasResult(result);
         return retval;
     };
     
     _me.create_tables = function() {
-//        console.info("Creating Stats Table");
+        console.info("Creating Stats Table");
         if (_me._localdb !== null) {
-            _me.execute("CREATE TABLE IF NOT EXISTS sk_endpoints (id integer PRIMARY KEY AUTOINCREMENT, endpoint_uri varchar(512), UNIQUE (endpoint_uri));").close();
-            _me.execute("CREATE TABLE IF NOT EXISTS sk_views (endpoint_id integer REFERENCES sk_endpoints(id), name varchar(128), schema text, syncspec text, vshash varchar(32), UNIQUE (endpoint_id, name));").close();
+            _me.execute("CREATE TABLE IF NOT EXISTS sk_endpoints (id integer PRIMARY KEY AUTOINCREMENT, endpoint_uri varchar(512), UNIQUE (endpoint_uri));");
+            _me.execute("CREATE TABLE IF NOT EXISTS sk_views (endpoint_id integer REFERENCES sk_endpoints(id), name varchar(128), schema text, syncspec text, vshash varchar(32), UNIQUE (endpoint_id, name));");
         } else {
             console.error("Could not create stats table. Local DB is null.");
         }        
@@ -61,8 +61,7 @@ _skProto = function() {
     _me.reset = function() {
 //        console.info("Resetting DB");
         if (_me._localdb !== null) {
-            _me._localdb.remove();
-            _me.opendb("synckit");
+            _me.openwebdb("synckit", "synckit local DB");
             _me.create_tables();
         }
         else {
@@ -80,21 +79,19 @@ _skProto = function() {
     _me.build_view = function(endpoint, viewname, viewspec) {
         var endpoint_id = _me.get_or_create_endpoint_id(endpoint);
         var view_res = _me.execute("SELECT vshash FROM sk_views WHERE endpoint_id = ? and name = ?;", [endpoint_id, viewname]);
-        if (!view_res.isValidRow()) {
-            view_res.close();
+        if (!_me.hasResult(view_res)) {
             // if it doesn't exist, create it.
             // create an entry in sk_views
-            _me.execute("INSERT INTO sk_views (endpoint_id, name, schema, syncspec, vshash) VALUES (?, ?, ?, ?, ?);", [endpoint_id, viewname, JSON.stringify(viewspec.schema), JSON.stringify(viewspec.syncspec), viewspec.vshash]).close();
+            _me.execute("INSERT INTO sk_views (endpoint_id, name, schema, syncspec, vshash) VALUES (?, ?, ?, ?, ?);", [endpoint_id, viewname, JSON.stringify(viewspec.schema), JSON.stringify(viewspec.syncspec), viewspec.vshash]);
             // create a table for the view
             _me.create_view_table(_me.view_table_name(endpoint_id, viewname), viewspec.schema, viewspec.syncspec)
-        } else if (viewspec.vshash != view_res.fieldByName('vshash')) {
-            view_res.close();
+        } else if (viewspec.vshash != view_res.item(0)['vshash']) {
             // if it exists, but had an outdated id, re-create it
             // update the entry in sk_views
-            _me.execute("UPDATE sk_views SET schema = ?, syncspec = ?, vshash = ? WHERE endpoint_id = ? AND name = ?;", [JSON.stringify(viewspec.schema), JSON.stringify(viewspec.syncspec), viewspec.vshash, endpoint_id, viewname]).close();
+            _me.execute("UPDATE sk_views SET schema = ?, syncspec = ?, vshash = ? WHERE endpoint_id = ? AND name = ?;", [JSON.stringify(viewspec.schema), JSON.stringify(viewspec.syncspec), viewspec.vshash, endpoint_id, viewname]);
             var view_table_name = _me.view_table_name(endpoint_id, viewname);
             // drop the old view's table
-            _me.execute("DROP TABLE IF EXISTS " + view_table_name + ";").close();
+            _me.execute("DROP TABLE IF EXISTS " + view_table_name + ";");
             // create the new view's table
             _me.create_view_table(view_table_name, viewspec.schema, viewspec.syncspec)
         }
@@ -105,13 +102,11 @@ _skProto = function() {
     _me.get_or_create_endpoint_id = function(endpoint) {
         endpoint_res = _me.execute("SELECT id FROM sk_endpoints WHERE endpoint_uri = ?;", [endpoint]);
         endpoint_id = 0;
-        if (!endpoint_res.isValidRow()) {
-            endpoint_res.close();
-            _me.execute("INSERT INTO sk_endpoints (endpoint_uri) VALUES (?);", [endpoint]).close();
+        if (!_me.hasResult(endpoint_res)) {
+            _me.execute("INSERT INTO sk_endpoints (endpoint_uri) VALUES (?);", [endpoint]);
             endpoint_res = _me.execute("SELECT id FROM sk_endpoints WHERE endpoint_uri = ?;", [endpoint]);
         }
-        var retval = endpoint_res.fieldByName('id');
-        endpoint_res.close();
+        var retval = endpoint_res.item(0)['id'];
         return retval;
     };
 
@@ -136,9 +131,9 @@ _skProto = function() {
         sql += " FROM sk_views WHERE endpoint_id = ? AND name = ?;";
         var res = _me.execute(sql, [endpoint_id, viewname]);
         var ret = {}
-        if (res.isValidRow()) {
-            for (var fieldnum = 0; fieldnum < fields.length; fieldnum++) {
-                var field_data = res.field(fieldnum);
+        if (_me.hasResult(res)) {
+            for (var fieldnum in fields) {
+                var field_data = res.item(0)[fields[fieldnum]];
                 var field = fields[fieldnum];
                 if (field == "syncspec" || field == "schema") {
                     field_data = JSON.parse(field_data);
@@ -148,7 +143,6 @@ _skProto = function() {
         } else {
             console.log('Could not find view in get_view_info: ' + viewname);
         }
-        res.close();
         return ret;
     };
     
@@ -170,7 +164,7 @@ _skProto = function() {
         }
         // TODO: do we need to index cube fields?
         sql += ");";
-        _me.execute(sql).close();
+        _me.execute(sql);
     };
     
     /* Synchronizes the local database with endpoint_uri.
@@ -250,12 +244,11 @@ _skProto = function() {
             var res = _me.execute(sql, [theid]);
             // If the row doesn't already exist, we continue with the query.
             // Otherwise, we've got the row, and don't send the query.
-            if (! res.isValidRow()) {
+            if (! _me.hasResult(res)) {
                 sq.filter = [theid];
             } else {
                 send_query = false;
             }
-            res.close();
         }
 
         // send_query is true if there was no filter, or if the filtered id
@@ -266,14 +259,14 @@ _skProto = function() {
             var sql = "SELECT " + syncspec.idfield + " FROM " + table + ";";
             var res = _me.execute(sql);
             var already = [];
-            while (res.isValidRow()) {
-                already.push(res.field(0));
-                res.next();
+            if (_me.hasResult(res)) {
+                for (var i = 0; i < res.length; i++) {
+                    already.push(res[0]);
+                }
             }
             if (already.length > 0) {
                 sq.exclude = already;	
             }
-            res.close();
             query[viewname] = sq;
         }
     };
@@ -303,11 +296,12 @@ _skProto = function() {
         var stmt = "SELECT " + minmax;
         stmt += "(" + syncspec.sortfield + ") FROM " + table + ";";
         var res  = _me.execute(stmt);
-        if (res.isValidRow() && (res.field(0) != null)) {
-            sq[minmax] = res.field(0);
+        if (_me.hasResult(res) && (res.item(0)[Object.keys(res.item(0))[0]] != null)) {
+            sq[minmax] = res.item(0)[Object.keys(res.item(0))[0]]
         }
-        res.close();
         if (extra_params && ('now' in extra_params)) {
+            console.log("now in extra_params");
+            console.log(extra_params);
             sq.now = extra_params.now;
         }
         query[viewname] = sq;
@@ -352,32 +346,37 @@ _skProto = function() {
         }
 
     };
-
+    
     _me.execute = function(statement, args) {
-        if (_me._localdb !== null) {
-//            console.log("$$$" + statement);
-//            console.log(args);
-            return _me._localdb.execute(statement, args);                
-        }
-        else {
-            console.error("Can't execute query. Local DB is null.");
+        try {
+            console.log("performing query: " + statement + ", " + args);
+            var result = _me._localdb.executeSql(statement, args).rows;
+            console.log(result);
+            return result;
+        } catch(e) {
+            console.error("something went wrong: " + e);
         }
     };
+    
+     _me.hasResult = function(res) {
+        if (res == undefined || res.length == 0) return false;
+        return true;
+     };
 
     // Returns the result of a query as a JSON statement
     _me.json_results_for = function(statement, args) {
         if (_me._localdb !== null) {
             var res = _me._localdb.execute(statement, args);
             var ans = [];
-            while (res.isValidRow()) {
-                var obj = {};
-                for (var i=0; i<res.fieldCount(); i++) {
-                    obj[res.fieldName(i)] = res.field(i);
+            if (_me.hasResult(res)) {
+                for (var i = 0; i < res.length; i++) {
+                    var obj = {};
+                    for (var j=0; j<res.fieldCount(); j++) {
+                        obj[res.item(i).fieldName(j)] = res.item(i).field(j);
+                    }
+                    ans[ans.length] = obj;
                 }
-                ans[ans.length] = obj;
-                res.next();
             }
-            res.close();
             return ans;      
         }
         else {
@@ -429,11 +428,9 @@ _skProto = function() {
             sqlStatement = sqlStatement.substr(0,sqlStatement.length - 1);
             sqlStatement += ");";
             
-            //_me.execute("BEGIN;");
             for (var rownum in results) {
                 _me.execute(sqlStatement, results[rownum]);
             }
-            //_me.execute("COMMIT;");
         }
         // Alert the sync requester that the job is done.
         _me._bulkloadTime = _me.timeEnd("bulkload");
@@ -444,20 +441,19 @@ _skProto = function() {
     // Debugging Methods
     // ----------------------------------------------------------------
     // 
-    _me.dump_stats = function(table) {
+     _me.dump_stats = function(table) {
         if (typeof(table) == "undefined") {
             // Get a list of all tables
             var result = _me.execute("SELECT name FROM sqlite_master WHERE type='table';");
-            while (result.isValidRow()) {
-                console.info("===" + result.field(0) + "===");
-                _me.dump_stats(result.field(0));
-                console.info("=============================");
-                console.info("=============================");
-                result.next();
+            if (_me.hasResult(result)) {
+                for (var i = 0; i < result.length; i++) {
+                    console.info("===" + result.item(i)[0] + "===");
+                    _me.dump_stats(result.item(i)[0]);
+                    console.info("=============================");
+                    console.info("=============================");
+                }
             }
-            var retval = result.isValidRow();
-            result.close();
-            return retval;
+            return false;
         }
     };
     
@@ -465,50 +461,50 @@ _skProto = function() {
         if (typeof(table) == "undefined") {
             // Get a list of all tables
             var result = _me.execute("SELECT name FROM sqlite_master WHERE type='table';");
-            while (result.isValidRow()) {
-                console.info("===" + result.field(0) + "===");
-                _me.dump(result.field(0));
-                console.info("=============================");
-                console.info("=============================");
-                result.next();
+            if (_me.hasResult(result)) {
+                for (var i = 0; i < result.length; i++) {
+                    console.info("table name: " + result.item(i)['name']);
+                    _me.dump(result.item(i)['name']);
+                    console.info("=============================");
+                    console.info("=============================");
+                }
             }
-            var retval = result.isValidRow();
-            result.close();
-            return retval;
+            return false;
             
         }
         
         if (_me._localdb !== null) {
             var rs = _me.execute("SELECT * FROM " + table + ";");
-            while (rs.isValidRow()) {
-              for (var i=0; i<rs.fieldCount(); i++) {
-                  console.log(rs.fieldName(i) + ": " + rs.field(i));
-              }
-              console.log("----");
-              rs.next();
+            
+            if (_me.hasResult(rs)) {
+                for (var i = 0; i < rs.length; i++) {
+                    console.log("Fields: " + Object.keys(rs.item(i)));
+                    for (j in Object.keys(rs.item(i))) {
+                        console.log(rs.item(i)[Object.keys(rs.item(i))[j]]);
+                    }
+                    console.log("----");
+                }
             }
-            rs.close();
         }
         else {
             console.error("Can't dump. Local DB is null.");
         }
     };
     
-    // Initialization
+    // Initializing web database
     // ----------------------------------------------------------------
+    
+    _me.openwebdb = function(db_name, db_description) {
+        var dbSize = 5 * 1024 * 1024; // 5MB
+        _me._localdb = require("../javascripts/webdatabase")
+            .openDatabase(db_name, "1.0", db_description, dbSize);
+    };
+    
+    _me.openwebdb("synckit", "synckit local DB");
+    _me._timers = {};
+    //_me.opendb("synckit"); 
+    _me.create_tables();
 
-    if ((typeof(google) != "undefined") &&
-        (typeof(google.gears) != "undefined")) {
-        
-        _me._localdb = google.gears.factory.create('beta.database');
-        _me._timers = {};
-        _me.opendb("synckit"); 
-        _me.create_tables();
-    }
-    else {
-        _me._localdb = null;
-        console.error("Google Gears not found.");
-    }
     
 }; // end _skProto = function() {
 

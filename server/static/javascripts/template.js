@@ -23,20 +23,24 @@ jQuery.fn.render_new = function(callback) {
 	window.synckit.timeStart("Rendering SQL Template");
 	var query = this.attr('query');
 	var templates = this.find("[itemscope]");
+	console.log("got here");
 	var res = window.synckit.execute(query);
+	console.log("got here");
+	console.log(res);
 	var map = {};
 	
-	while (res.isValidRow()) {
-		// Loop over each item to do
-		templates.each(function(i) {
-			jQuery(this).find("[itemprop]").each(function(j) {
-				var prop = jQuery(this).attr("itemprop");
-				var val = res.fieldByName(prop);
-				jQuery(this).html(val);
-			});
-			jQuery(this).before(jQuery(this).clone());
-		});
-		res.next();
+	if (window.synckit.hasResult(res)) {
+        for (var x = 0; x < res.length; x++) {
+            // Loop over each item to do
+            templates.each(function(i) {
+                jQuery(this).find("[itemprop]").each(function(j) {
+                    var prop = jQuery(this).attr("itemprop");
+                    var val = res.item(x)[prop];
+                    jQuery(this).html(val);
+                });
+                jQuery(this).before(jQuery(this).clone());
+            });
+        }
     }
 
 	templates.each(function(i) {

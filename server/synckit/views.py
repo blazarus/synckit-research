@@ -7,6 +7,7 @@ import json
 __all__ = ["ViewManager", "SetView", "QueueView", "CubeView"]
 
 def generate_view_args(request):
+    print request.REQUEST.keys()
     queries = request.REQUEST["queries"]
     perf = {}
     if "latency" in request.REQUEST:

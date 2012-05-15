@@ -1,18 +1,10 @@
-<style type="text/css">
-<?php include "../stylesheets/style.css" ?>
-</style>
-<script type="text/javascript">
-<?php include "../javascripts/gears_init.js" ?>
+<link href="../stylesheets/style.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="../javascripts/jquery-1.3.2.min.js"></script>
+<script type="text/javascript" src="../javascripts/oni-apollo.js"></script>
+<script type="text/javascript" src="../javascripts/stringify.js"></script>
+<script type="text/sjs">
+<?php include "../../../src/js/sync.js" ?>
 </script>
-<script type="text/javascript">
-<?php include "../javascripts/jquery-1.3.2.min.js" ?>
-</script>
-<script type="text/javascript">
-<?php include "../javascripts/stringify.js" ?>
-</script>
-<script type="text/javascript">
-<?php include "../javascripts/sync.js" ?>
-</script>
-<script type="text/javascript">
+<script type="text/sjs">
 <?php include "../javascripts/template.js" ?>
 </script>

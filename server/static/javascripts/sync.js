@@ -19,6 +19,7 @@ _skProto = function() {
     
     // Methods
     // ----------------------------------------------------------------
+    
     _me.opendb = function(name) {
         if (_me._localdb !== null) {
             _me._localdb.open(name);
@@ -352,17 +353,16 @@ _skProto = function() {
         }
 
     };
-
+    
     _me.execute = function(statement, args) {
-        if (_me._localdb !== null) {
-//            console.log("$$$" + statement);
-//            console.log(args);
-            return _me._localdb.execute(statement, args);                
+        try {
+          var result = _me._localdb.executeSql(statement, args).rows;
+          alert("performed query");
+          return result;
+        } catch(e) {
+          alert("something went wrong");
         }
-        else {
-            console.error("Can't execute query. Local DB is null.");
-        }
-    };
+    }
 
     // Returns the result of a query as a JSON statement
     _me.json_results_for = function(statement, args) {
@@ -429,11 +429,9 @@ _skProto = function() {
             sqlStatement = sqlStatement.substr(0,sqlStatement.length - 1);
             sqlStatement += ");";
             
-            //_me.execute("BEGIN;");
             for (var rownum in results) {
-                _me.execute(sqlStatement, results[rownum]);
+                _me.execute(sqlStatement, results[rownum], _me.onWebdbSuccess, _me.onWebdbError);
             }
-            //_me.execute("COMMIT;");
         }
         // Alert the sync requester that the job is done.
         _me._bulkloadTime = _me.timeEnd("bulkload");
@@ -444,7 +442,7 @@ _skProto = function() {
     // Debugging Methods
     // ----------------------------------------------------------------
     // 
-    _me.dump_stats = function(table) {
+     _me.dump_stats = function(table) {
         if (typeof(table) == "undefined") {
             // Get a list of all tables
             var result = _me.execute("SELECT name FROM sqlite_master WHERE type='table';");
@@ -494,10 +492,20 @@ _skProto = function() {
         }
     };
     
-    // Initialization
+    // Initializing web database
     // ----------------------------------------------------------------
+    
+    _me.openwebdb = function(dbName, dbDescription) {
+        var dbSize = 5 * 1024 * 1024; // 5MB
+        _me._localdb = require("../javascripts/webdatabase").openDatabase(db_name, "1.0", db_description, dbSize);
+    };
+    
+    _me.openwebdb("beta.database");
+    _me._timers = {};
+    _me.opendb("synckit"); 
+    _me.create_tables();
 
-    if ((typeof(google) != "undefined") &&
+    /*if ((typeof(google) != "undefined") &&
         (typeof(google.gears) != "undefined")) {
         
         _me._localdb = google.gears.factory.create('beta.database');
@@ -508,7 +516,7 @@ _skProto = function() {
     else {
         _me._localdb = null;
         console.error("Google Gears not found.");
-    }
+    }*/
     
 }; // end _skProto = function() {
 

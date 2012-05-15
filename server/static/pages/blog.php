@@ -2,7 +2,7 @@
 <html>
 <head>
 <?php include "synckit-header.php" ?>
-<script>
+<script type="text/sjs">
 $(function() {
     // console.info("Page Loaded");
     window.synckit = create_synckit(); 
@@ -24,17 +24,18 @@ $(function() {
     // 'now' is a parameter used for time-travel through the posts
     var extra_view_params = {};
     var now = urlParam('now');
-	if (now != 'undefined') {
+	if (now != 'undefined' && now != '0') {
 	    extra_view_params.Posts = {"now": now};
 	}
     
     var callback = function() {
         window.synckit.timeStart("template");
+		console.log("making template or something");
 		$('#newtemplate').render_new();
 	    window.synckit._templateTime = window.synckit.timeEnd("template");;
-        if (parent.LogData != "undefined") {
-        	parent.LogData("Blog", "Sync Kit", window.location.href, window.synckit);
-        }
+        //if (parent.LogData != "undefined") {
+        //	parent.LogData("Blog", "Sync Kit", window.location.href, window.synckit);
+        //}
     };
 
     window.synckit.sync(endpoint, ["Posts"], extra_view_params, {}, callback);
