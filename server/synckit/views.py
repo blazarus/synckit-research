@@ -139,6 +139,27 @@ class BaseView:
     def set_name(self, view_name):
         self.view_name = view_name
 
+class SQLView(BaseView):
+    """
+    Represents a simple view that just executes the query it is given.
+    No caching on client for this view.
+    """
+    def __init__(self, model, query):
+        BaseView.__init__(self, model)
+        self.model = model
+        self.query = query
+        return
+
+    def queryset_impl(self, query, perf):
+        raw_query_set = self.model.objects.raw(query)
+        return raw_query_set
+
+    def sync_spec(self):
+        return {
+            '__type': 'sql',
+            'query' : self.query
+        }
+
 class SetView(BaseView):
     def __init__(self, model, idfield, prefetch_config=None):
         BaseView.__init__(self, model)
