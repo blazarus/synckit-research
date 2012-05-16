@@ -30,9 +30,8 @@ $(function() {
     
     var callback = function() {
         window.synckit.timeStart("template");
-		console.log("making template or something");
 		$('#newtemplate').render_new();
-	    window.synckit._templateTime = window.synckit.timeEnd("template");;
+	    window.synckit._templateTime = window.synckit.timeEnd("template");
         //if (parent.LogData != "undefined") {
         //	parent.LogData("Blog", "Sync Kit", window.location.href, window.synckit);
         //}
@@ -55,7 +54,7 @@ $(function() {
 <p align="center"><b>Template Loading...</b></p>
 </div>
 
-<table id="newtemplate" query="SELECT * From sk_Posts1 LIMIT 10;" as="entry">
+<table id="newtemplate" query="SELECT * FROM sk_Posts1 LIMIT 10;" as="entry">
 	<tr itemscope="yes" itemtype="Entry" />
 		<td><span itemprop="title">from</span></td>
 		<td><span itemprop="contents">content</span></td>

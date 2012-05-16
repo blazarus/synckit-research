@@ -23,10 +23,8 @@ jQuery.fn.render_new = function(callback) {
 	window.synckit.timeStart("Rendering SQL Template");
 	var query = this.attr('query');
 	var templates = this.find("[itemscope]");
-	console.log("got here");
 	var res = window.synckit.execute(query);
-	console.log("got here");
-	console.log(res);
+	console.log("Rendering template with query result: ", res);
 	var map = {};
 	
 	if (window.synckit.hasResult(res)) {

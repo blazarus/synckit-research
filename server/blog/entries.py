@@ -16,8 +16,6 @@ ft_manager = ViewManager(ViewManager.SyncType.FLYING_TEMPLATES)
 ft_qv = QueueView(Entry, "date", 10)
 ft_manager.register("Posts", ft_qv)
 
-auto_manager = AutoSync("SELECT blog_entry.id, blog_entry.title, blog_entry.contents, blog_entry.date FROM blog_entry ORDER BY blog_entry.date DESC LIMIT 10;")
-
 query_times = 0.0
 template_times = 0.0
 num_queries = 0
@@ -50,6 +48,7 @@ def seepage(request):
     return response
 
 def autosync(request):
+    auto_manager = AutoSync("SELECT blog_entry.id, blog_entry.title, blog_entry.contents, blog_entry.date FROM blog_entry ORDER BY blog_entry.date DESC LIMIT 10;")
     results = auto_manager.runqueries(request)
     response = HttpResponse(json.dumps(results), mimetype='application/json')
     return response

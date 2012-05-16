@@ -67,8 +67,17 @@ _skProto = function() {
     };
     
     _me.reset = function() {
-//        console.info("Resetting DB");
+        console.info("Resetting DB");
         if (_me._localdb !== null) {
+            var result = _me.execute("SELECT name FROM sqlite_master WHERE type='table';");
+            if (_me.hasResult(result)) {
+                for (var i = 0; i < result.length; i++) {
+                    var table_name = result.item(i)['name'];
+                    console.log("Dropping table: " + table_name);
+                    _me.execute("DROP TABLE IF EXISTS " + table_name + ";");
+                }
+            }
+
             _me.openwebdb("synckit", "synckit local DB");
             _me.create_tables();
         }
@@ -160,6 +169,7 @@ _skProto = function() {
      * statements for CREATE TABLE statements, be careful what table/field 
      * names you pass into this function.*/
     _me.create_view_table = function(view_table_name, schema, syncspec) {
+        console.log("creating view table in local db:", view_table_name);
         var sql = "CREATE TABLE " + view_table_name + " ("; 
         for (var i = 0; i < schema.length; i++) {
             sql += schema[i] + ",";
@@ -355,11 +365,18 @@ _skProto = function() {
 
     };
     
+    /* Executes a query using HTML5 Web DB
+     * statement is a string that is the prepared SQL statement
+     * args are the arguments to fill in the prepared statement
+     * returns a SQLResultSetRowList, which has an 'item(index)' method
+     * and a 'length' field. Call item to get the row, which is just
+     * a dictionary with the form row[rs.fieldName(i)] = rs.field(i);
+    */
     _me.execute = function(statement, args) {
         try {
             console.log("performing query: " + statement + ", " + args);
             var result = _me._localdb.executeSql(statement, args).rows;
-            console.log(result);
+            console.log("query result: ", result);
             return result;
         } catch(e) {
             console.error("something went wrong: " + e);
@@ -556,10 +573,8 @@ jQuery.fn.render_new = function(callback) {
 	window.synckit.timeStart("Rendering SQL Template");
 	var query = this.attr('query');
 	var templates = this.find("[itemscope]");
-	console.log("got here");
 	var res = window.synckit.execute(query);
-	console.log("got here");
-	console.log(res);
+	console.log("Rendering template with query result: ", res);
 	var map = {};
 	
 	if (window.synckit.hasResult(res)) {
@@ -640,9 +655,8 @@ $(function() {
     
     var callback = function() {
         window.synckit.timeStart("template");
-		console.log("making template or something");
 		$('#newtemplate').render_new();
-	    window.synckit._templateTime = window.synckit.timeEnd("template");;
+	    window.synckit._templateTime = window.synckit.timeEnd("template");
         //if (parent.LogData != "undefined") {
         //	parent.LogData("Blog", "Sync Kit", window.location.href, window.synckit);
         //}
@@ -665,7 +679,7 @@ $(function() {
 <p align="center"><b>Template Loading...</b></p>
 </div>
 
-<table id="newtemplate" query="SELECT * From sk_Posts1 LIMIT 10;" as="entry">
+<table id="newtemplate" query="SELECT * FROM sk_Posts1 LIMIT 10;" as="entry">
 	<tr itemscope="yes" itemtype="Entry" />
 		<td><span itemprop="title">from</span></td>
 		<td><span itemprop="contents">content</span></td>
