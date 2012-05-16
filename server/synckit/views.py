@@ -148,10 +148,11 @@ class SQLView(BaseView):
         BaseView.__init__(self, model)
         self.model = model
         self.query = query
+        self.init_viewspec();
         return
 
     def queryset_impl(self, query, perf):
-        raw_query_set = self.model.objects.raw(query)
+        raw_query_set = self.model.objects.raw(self.query)
         return raw_query_set
 
     def sync_spec(self):

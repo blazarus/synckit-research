@@ -1,6 +1,7 @@
 from django.http import HttpResponse
 from models import *
 from synckit.views import *
+from synckit.views import SQLView
 from synckit.autosync import *
 from django.template import Context, loader
 import json
@@ -11,6 +12,8 @@ import time
 sk_manager = ViewManager()
 sk_qv = QueueView(Entry, "date", 10)
 sk_manager.register("Posts", sk_qv)
+sk_sqlv = SQLView(Entry, "SELECT blog_entry.id, blog_entry.title, blog_entry.contents, blog_entry.date FROM blog_entry ORDER BY blog_entry.date DESC LIMIT 10;")
+sk_manager.register("blog_entry", sk_sqlv)
 
 ft_manager = ViewManager(ViewManager.SyncType.FLYING_TEMPLATES)
 ft_qv = QueueView(Entry, "date", 10)
@@ -48,8 +51,9 @@ def seepage(request):
     return response
 
 def autosync(request):
-    auto_manager = AutoSync("SELECT blog_entry.id, blog_entry.title, blog_entry.contents, blog_entry.date FROM blog_entry ORDER BY blog_entry.date DESC LIMIT 10;")
-    results = auto_manager.runqueries(request)
+    #auto_manager = AutoSync("SELECT blog_entry.id, blog_entry.title, blog_entry.contents, blog_entry.date FROM blog_entry ORDER BY blog_entry.date DESC LIMIT 10;")
+    #results = auto_manager.runqueries(request)
+    results = sk_manager.runqueries(request)
     response = HttpResponse(json.dumps(results), mimetype='application/json')
     return response
 

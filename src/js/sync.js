@@ -161,6 +161,8 @@ _skProto = function() {
             sql += ", UNIQUE (" + syncspec.sortfield + ")";
         } else if (syncspec.__type === "set") {
             sql += ", UNIQUE (" + syncspec.idfield + ")";
+        } else if (syncspec.__type === "sql") {
+            //sql += ", UNIQUE (" + "contents text" + ")";
         }
         // TODO: do we need to index cube fields?
         sql += ");";
@@ -206,6 +208,8 @@ _skProto = function() {
                 }
                 else if (syncspec.__type == "cube") {
                     _me.cube_query(endpoint_id, viewname, syncspec, extra_view_params[viewname], query);
+                } else if (syncspec.__type == "sql") {
+                    _me.sql_query(endpoint_id, viewname, syncspec, extra_view_params[viewname], query);
                 }
 
                 if (viewname in query) {
@@ -219,7 +223,18 @@ _skProto = function() {
             return {};
         }        
     };
-
+    
+    _me.sql_query = function(endpoint_id, viewname, syncspec, extra_view_params, query) {
+        if (syncspec.__type != "sql") {
+            console.log("Configuring a sql that isn't: " + view_name);
+            return;
+        }
+        var sq = {};
+        sq.query = syncspec.query;
+        query[viewname] = sq;
+    }
+    
+    
     /* Configures the 'query' dictionary to append a query for the endpoint
      * and view specified by viewname, whose type is a set.  The syncspec
      * contains sync information for this set, and extra_params may be
@@ -334,7 +349,6 @@ _skProto = function() {
             for (var key in extra_query_params) {
                 params[key] = extra_query_params[key];
             }
-            
             _me._queryParams = params;            
             _me.timeStart("xfer");
             jQuery.post(endpoint_uri, params, function(response) {
@@ -520,4 +534,3 @@ function urlParam(name){
 	}
 	return 0;
 }
-

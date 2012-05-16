@@ -11,10 +11,8 @@ $(function() {
     var viewspec = {
         "vshash": "3c9977be25383449119b351ce5388e81",
         "syncspec": {
-             "limit": 10,
-             "__type": "queue",
-             "order": "ASC",
-             "sortfield": "date"
+             "__type": "sql",
+             "query": "SELECT blog_entry.id, blog_entry.title, blog_entry.contents, blog_entry.date FROM blog_entry ORDER BY blog_entry.date DESC LIMIT 10;"
             }, 
         "schema": ["title varchar(200)", "date timestamp with time zone", "contents text", "id serial"]
     };
@@ -23,10 +21,12 @@ $(function() {
 
     // 'now' is a parameter used for time-travel through the posts
     var extra_view_params = {};
-    var now = urlParam('now');
-	if (now != 'undefined' && now != '0') {
+    //var now = urlParam('now');
+	/*
+    if (now != 'undefined' && now != '0') {
 	    extra_view_params.Posts = {"now": now};
 	}
+     */
     
     var callback = function() {
         window.synckit.timeStart("template");
