@@ -4,7 +4,7 @@ setup_environ(settings)
 
 from django.db import transaction
 from server.blog.models import *
-from text_utils import generate_string
+from text_tools import generate_string
 
 import datetime
 import random

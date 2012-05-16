@@ -36,7 +36,7 @@ class ViewManager:
             if name in self.views:
                 retval = {}
                 view = self.views[name]
-                retval["results"] = view.results(view_queries, perf)
+                retval["results"] = list(view.results(view_queries, perf))
                 if self.sync_type is ViewManager.SyncType.SYNC_KIT:
                     viewspec = view.viewspec_if_necessary(view_queries[name])
                     if viewspec is not None :
@@ -64,17 +64,14 @@ class BaseView:
         self.parent_path = None
         self.result_format = BaseView.ResultFormat.OBJECT_WITH_FIELDS
     def results(self, queries, perf):
-        results = []
         queryset = self.queryset(queries, perf)
-        # TODO: make this a generator rather than instantiating everything
         for result in queryset:
             if self.result_format is BaseView.ResultFormat.OBJECT_WITH_FIELDS:
-                results.append([str(getattr(result, field)) for field in self.attrs])
+                yield [str(getattr(result, field)) for field in self.attrs]
             elif self.result_format is BaseView.ResultFormat.DICT_WITH_KEYS:
-                results.append([str(result[field]) for field in self.attrs])
+                yield [str(result[field]) for field in self.attrs]
             else:
                 raise TypeError("Invalid result format: %s" % (self.result_format))
-        return results
     
     def queryset(self, queries, perf):
         queryset = self.queryset_impl(queries[self.view_name], perf)
